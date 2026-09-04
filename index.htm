@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>직업 추천 서비스(1등급 주시조)</title>
+  <style>
+    :root {
+      --bg: #070709;
+      --panel: #111116;
+      --panel-2: #17171f;
+      --text: #f7f7fb;
+      --muted: #aaaab5;
+      --pink: #ff1493;
+      --pink-soft: rgba(255, 20, 147, 0.18);
+      --line: rgba(255,255,255,0.10);
+      --shadow: 0 16px 40px rgba(0,0,0,0.38);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(255,20,147,0.16), transparent 30%),
+        radial-gradient(circle at 90% 20%, rgba(255,20,147,0.08), transparent 26%),
+        linear-gradient(145deg, #050506, #0c0c10 48%, #060607);
+      font-family: "Noto Sans KR", "Malgun Gothic", Arial, sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .16;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, black, transparent 75%);
+    }
+
+    button { font: inherit; }
+
+    .wrap {
+      width: min(980px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 54px 0 70px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 34px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 7px 12px;
+      border: 1px solid rgba(255,20,147,.45);
+      border-radius: 999px;
+      color: #ff74bd;
+      background: rgba(255,20,147,.08);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+
+    h1 {
+      margin: 16px 0 10px;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.08;
+      letter-spacing: -0.045em;
+    }
+
+    .hero strong {
+      color: var(--pink);
+      text-shadow: 0 0 18px rgba(255,20,147,.48);
+    }
+
+    .subtitle {
+      margin: 0 auto;
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .progress-box {
+      position: sticky;
+      top: 12px;
+      z-index: 20;
+      margin: 0 auto 22px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(12,12,16,.88);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .progress-meta b { color: #fff; }
+
+    .progress-track {
+      height: 7px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #24242c;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff1493, #ff5cb4);
+      box-shadow: 0 0 14px rgba(255,20,147,.72);
+      transition: width .25s ease;
+    }
+
+    .questions {
+      display: grid;
+      gap: 14px;
+    }
+
+    .question-card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: linear-gradient(145deg, rgba(22,22,29,.94), rgba(13,13,18,.96));
+      box-shadow: 0 10px 28px rgba(0,0,0,.22);
+      transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+    }
+
+    .question-card.answered {
+      border-color: rgba(255,20,147,.42);
+      box-shadow: 0 10px 30px rgba(0,0,0,.26), inset 0 0 24px rgba(255,20,147,.035);
+    }
+
+    .q-top {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .q-number {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      color: var(--pink);
+      border: 1px solid rgba(255,20,147,.4);
+      background: rgba(255,20,147,.08);
+      font-weight: 900;
+    }
+
+    .q-text {
+      margin: 4px 0 18px;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.58;
+      letter-spacing: -.02em;
+    }
+
+    .score-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-left: 50px;
+    }
+
+    .score-btn,
+    .primary-btn,
+    .secondary-btn {
+      border: 1px solid rgba(255,255,255,.13);
+      color: #fff;
+      background: #17171e;
+      cursor: pointer;
+      transition:
+        background .18s ease,
+        border-color .18s ease,
+        box-shadow .18s ease,
+        transform .18s ease,
+        color .18s ease;
+    }
+
+    .score-btn {
+      min-height: 48px;
+      border-radius: 13px;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .score-btn:hover,
+    .score-btn:focus-visible,
+    .primary-btn:hover,
+    .primary-btn:focus-visible,
+    .secondary-btn:hover,
+    .secondary-btn:focus-visible,
+    .result-card:hover {
+      outline: none;
+      border-color: var(--pink);
+      background: #240b1b;
+      box-shadow:
+        0 0 10px rgba(255,20,147,.7),
+        0 0 28px rgba(255,20,147,.36),
+        inset 0 0 16px rgba(255,20,147,.10);
+      transform: translateY(-2px);
+    }
+
+    .score-btn.selected {
+      color: #fff;
+      background: var(--pink);
+      border-color: var(--pink);
+      box-shadow: 0 0 16px rgba(255,20,147,.58);
+    }
+
+    .score-btn.selected:hover,
+    .score-btn.selected:focus-visible {
+      background: #ff2b9d;
+    }
+
+    .scale-hint {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 2px 0 52px;
+      color: #7f7f8b;
+      font-size: 11px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin: 28px 0 0;
+    }
+
+    .primary-btn,
+    .secondary-btn {
+      min-height: 54px;
+      padding: 0 24px;
+      border-radius: 14px;
+      font-weight: 900;
+    }
+
+    .primary-btn {
+      min-width: 210px;
+      background: var(--pink);
+      border-color: var(--pink);
+      box-shadow: 0 0 18px rgba(255,20,147,.28);
+    }
+
+    .primary-btn:disabled {
+      cursor: not-allowed;
+      opacity: .35;
+      transform: none;
+      box-shadow: none;
+      border-color: rgba(255,255,255,.13);
+      background: #17171e;
+    }
+
+    .secondary-btn {
+      background: #15151b;
+      color: #d7d7df;
+    }
+
+    .message {
+      min-height: 22px;
+      margin-top: 14px;
+      text-align: center;
+      color: #ff84c5;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .results {
+      display: none;
+      margin-top: 48px;
+      scroll-margin-top: 92px;
+    }
+
+    .results.show { display: block; }
+
+    .results-head {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .results-head h2 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 38px);
+      letter-spacing: -.04em;
+    }
+
+    .results-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .result-card {
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: #111117;
+      box-shadow: var(--shadow);
+      transition:
+        background .18s ease,
+        border-color .18s ease,
+        box-shadow .18s ease,
+        transform .18s ease;
+    }
+
+    .result-card:first-child {
+      border-color: rgba(255,20,147,.55);
+      box-shadow: 0 15px 40px rgba(0,0,0,.4), 0 0 24px rgba(255,20,147,.12);
+    }
+
+    .image-wrap {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,20,147,.28), transparent 30%),
+        linear-gradient(145deg, #2a0b20, #111117 65%);
+    }
+
+    .job-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .image-fallback {
+      display: none;
+      width: 100%;
+      height: 100%;
+      place-items: center;
+      padding: 18px;
+      color: rgba(255,255,255,.9);
+      font-size: 24px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .rank {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      color: white;
+      background: rgba(7,7,9,.82);
+      border: 1px solid rgba(255,20,147,.5);
+      box-shadow: 0 0 14px rgba(255,20,147,.28);
+      font-weight: 1000;
+    }
+
+    .result-body {
+      padding: 18px;
+    }
+
+    .job-name {
+      margin: 0;
+      font-size: 23px;
+      font-weight: 1000;
+      letter-spacing: -.04em;
+    }
+
+    .distance {
+      margin-top: 7px;
+      color: #ff79bf;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .error-box {
+      display: none;
+      margin: 20px auto 0;
+      max-width: 760px;
+      padding: 16px 18px;
+      border: 1px solid rgba(255,86,125,.35);
+      border-radius: 14px;
+      color: #ffd7e3;
+      background: rgba(96,10,37,.22);
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .error-box.show { display: block; }
+
+    footer {
+      margin-top: 42px;
+      text-align: center;
+      color: #666672;
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .wrap {
+        width: min(100% - 22px, 980px);
+        padding-top: 34px;
+      }
+
+      .question-card { padding: 18px 15px; }
+      .q-top { gap: 10px; }
+      .q-number { width: 32px; height: 32px; }
+      .q-text { font-size: 15px; margin-top: 2px; }
+
+      .score-row {
+        margin-left: 0;
+        gap: 7px;
+      }
+
+      .scale-hint {
+        margin-left: 2px;
+      }
+
+      .score-btn {
+        min-height: 45px;
+        border-radius: 11px;
+      }
+
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .result-card {
+        display: grid;
+        grid-template-columns: 42% 58%;
+      }
+
+      .image-wrap {
+        aspect-ratio: auto;
+        min-height: 150px;
+      }
+
+      .result-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .primary-btn, .secondary-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <div class="eyebrow">JOB MATCH</div>
+      <h1>직업 추천 서비스<br><strong>(1등급 주시조)</strong></h1>
+      <p class="subtitle">
+        각 문항에서 자신에게 얼마나 중요한지 1~5점으로 선택하면,
+        응답과 가장 가까운 특성을 가진 직업 3개를 추천합니다.
+      </p>
+    </header>
+
+    <section id="app">
+      <div class="progress-box">
+        <div class="progress-meta">
+          <span>응답 진행도</span>
+          <b><span id="answeredCount">0</span> / <span id="questionCount">0</span></b>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+      </div>
+
+      <div id="questions" class="questions"></div>
+
+      <div class="actions">
+        <button type="button" class="primary-btn" id="recommendBtn" disabled>추천 결과 보기</button>
+        <button type="button" class="secondary-btn" id="resetBtn">다시 선택하기</button>
+      </div>
+
+      <div id="message" class="message" aria-live="polite"></div>
+
+      <section id="results" class="results">
+        <div class="results-head">
+          <h2>당신과 가까운 직업 TOP 3</h2>
+          <p>응답 점수와 직업별 특성 점수 사이의 유클리드 거리가 가까운 순서입니다.</p>
+        </div>
+        <div id="resultGrid" class="result-grid"></div>
+      </section>
+
+      <div id="errorBox" class="error-box"></div>
+    </section>
+
+    <footer>직업 추천 서비스(1등급 주시조)</footer>
+  </main>
+
+  <script>
+    const QUESTION_CSV = "data/질문.csv";
+    const ITEM_CSV = "data/item.csv";
+
+    const state = {
+      questions: [],
+      items: [],
+      featureNames: [],
+      answers: []
+    };
+
+    const questionsEl = document.getElementById("questions");
+    const answeredCountEl = document.getElementById("answeredCount");
+    const questionCountEl = document.getElementById("questionCount");
+    const progressBarEl = document.getElementById("progressBar");
+    const recommendBtn = document.getElementById("recommendBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const messageEl = document.getElementById("message");
+    const resultsEl = document.getElementById("results");
+    const resultGridEl = document.getElementById("resultGrid");
+    const errorBoxEl = document.getElementById("errorBox");
+
+    // 쉼표와 큰따옴표가 포함된 CSV도 읽을 수 있는 간단한 파서
+    function parseCSV(text) {
+      text = text.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            cell += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          row.push(cell.trim());
+          cell = "";
+        } else if (char === "\n" && !inQuotes) {
+          row.push(cell.trim());
+          if (row.some(value => value !== "")) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += char;
+        }
+      }
+
+      row.push(cell.trim());
+      if (row.some(value => value !== "")) rows.push(row);
+
+      return rows;
+    }
+
+    async function loadCSV(path) {
+      const response = await fetch(path, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`${path} 파일을 불러오지 못했습니다. (${response.status})`);
+      }
+      return parseCSV(await response.text());
+    }
+
+    function readQuestions(rows) {
+      return rows
+        .filter(row => row.length >= 2)
+        .map((row, index) => ({
+          number: Number(row[0]) || index + 1,
+          text: row.slice(1).join(",").trim()
+        }))
+        .filter(q => q.text);
+    }
+
+    function readItems(rows) {
+      if (rows.length < 2) throw new Error("item.csv에 데이터가 없습니다.");
+
+      const header = rows[0].map(v => v.trim());
+
+      const numberIndex = header.indexOf("번호");
+      const jobIndex = header.indexOf("직업");
+
+      if (jobIndex === -1) {
+        throw new Error("item.csv에서 '직업' 열을 찾을 수 없습니다.");
+      }
+
+      // 번호와 직업을 제외한 나머지 열을 직업 특성 점수로 사용
+      const featureIndexes = header
+        .map((name, index) => ({ name, index }))
+        .filter(col => col.index !== numberIndex && col.index !== jobIndex)
+        .filter(col => col.name && !/이미지|파일명/i.test(col.name));
+
+      const items = rows.slice(1)
+        .filter(row => row[jobIndex] && row[jobIndex].trim())
+        .map((row, rowIndex) => ({
+          number: numberIndex >= 0 ? (Number(row[numberIndex]) || rowIndex + 1) : rowIndex + 1,
+          job: row[jobIndex].trim(),
+          scores: featureIndexes.map(col => Number(row[col.index]))
+        }))
+        .filter(item => item.scores.every(Number.isFinite));
+
+      return {
+        featureNames: featureIndexes.map(col => col.name),
+        items
+      };
+    }
+
+    function renderQuestions() {
+      questionsEl.innerHTML = "";
+      state.answers = Array(state.questions.length).fill(null);
+
+      state.questions.forEach((question, qIndex) => {
+        const card = document.createElement("article");
+        card.className = "question-card";
+        card.dataset.index = qIndex;
+
+        const top = document.createElement("div");
+        top.className = "q-top";
+
+        const num = document.createElement("div");
+        num.className = "q-number";
+        num.textContent = question.number;
+
+        const text = document.createElement("div");
+        text.className = "q-text";
+        text.textContent = question.text;
+
+        top.append(num, text);
+
+        const scoreRow = document.createElement("div");
+        scoreRow.className = "score-row";
+        scoreRow.setAttribute("role", "group");
+        scoreRow.setAttribute("aria-label", `${question.number}번 질문 점수`);
+
+        for (let score = 1; score <= 5; score++) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "score-btn";
+          btn.textContent = score;
+          btn.dataset.score = score;
+          btn.setAttribute("aria-label", `${score}점`);
+
+          btn.addEventListener("click", () => {
+            state.answers[qIndex] = score;
+
+            scoreRow.querySelectorAll(".score-btn").forEach(el => {
+              const selected = Number(el.dataset.score) === score;
+              el.classList.toggle("selected", selected);
+              el.setAttribute("aria-pressed", selected ? "true" : "false");
+            });
+
+            card.classList.add("answered");
+            messageEl.textContent = "";
+            updateProgress();
+          });
+
+          scoreRow.appendChild(btn);
+        }
+
+        const hint = document.createElement("div");
+        hint.className = "scale-hint";
+        hint.innerHTML = "<span>1점</span><span>5점</span>";
+
+        card.append(top, scoreRow, hint);
+        questionsEl.appendChild(card);
+      });
+
+      questionCountEl.textContent = state.questions.length;
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const answered = state.answers.filter(v => v !== null).length;
+      const total = state.answers.length;
+      const percent = total ? (answered / total) * 100 : 0;
+
+      answeredCountEl.textContent = answered;
+      questionCountEl.textContent = total;
+      progressBarEl.style.width = `${percent}%`;
+      recommendBtn.disabled = answered !== total || total === 0;
+    }
+
+    function euclideanDistance(userScores, itemScores) {
+      const sumOfSquares = userScores.reduce((sum, value, index) => {
+        const diff = value - itemScores[index];
+        return sum + diff * diff;
+      }, 0);
+
+      return Math.sqrt(sumOfSquares);
+    }
+
+    function getRecommendations() {
+      return state.items
+        .map(item => ({
+          ...item,
+          distance: euclideanDistance(state.answers, item.scores)
+        }))
+        .sort((a, b) => {
+          if (a.distance !== b.distance) return a.distance - b.distance;
+          return a.number - b.number;
+        })
+        .slice(0, 3);
+    }
+
+    function imageCandidates(jobName) {
+      const base = `img/${encodeURIComponent(jobName)}`;
+      return [
+        `${base}.jpg`,
+        `${base}.jpeg`,
+        `${base}.png`,
+        `${base}.webp`
+      ];
+    }
+
+    function attachImageWithFallback(img, fallback, jobName) {
+      const candidates = imageCandidates(jobName);
+      let index = 0;
+
+      const tryNext = () => {
+        if (index >= candidates.length) {
+          img.style.display = "none";
+          fallback.style.display = "grid";
+          return;
+        }
+
+        img.src = candidates[index++];
+      };
+
+      img.addEventListener("error", tryNext);
+      img.addEventListener("load", () => {
+        img.style.display = "block";
+        fallback.style.display = "none";
+      });
+
+      tryNext();
+    }
+
+    function renderResults(recommendations) {
+      resultGridEl.innerHTML = "";
+
+      recommendations.forEach((item, index) => {
+        const card = document.createElement("article");
+        card.className = "result-card";
+
+        const imageWrap = document.createElement("div");
+        imageWrap.className = "image-wrap";
+
+        const rank = document.createElement("div");
+        rank.className = "rank";
+        rank.textContent = index + 1;
+
+        const img = document.createElement("img");
+        img.className = "job-image";
+        img.alt = `${item.job} 이미지`;
+
+        const fallback = document.createElement("div");
+        fallback.className = "image-fallback";
+        fallback.textContent = item.job;
+
+        imageWrap.append(rank, img, fallback);
+
+        const body = document.createElement("div");
+        body.className = "result-body";
+
+        const name = document.createElement("h3");
+        name.className = "job-name";
+        name.textContent = item.job;
+
+        const distance = document.createElement("div");
+        distance.className = "distance";
+        distance.textContent = `유클리드 거리 ${item.distance.toFixed(2)}`;
+
+        body.append(name, distance);
+        card.append(imageWrap, body);
+        resultGridEl.appendChild(card);
+
+        attachImageWithFallback(img, fallback, item.job);
+      });
+
+      resultsEl.classList.add("show");
+      resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function resetAnswers() {
+      state.answers.fill(null);
+
+      document.querySelectorAll(".score-btn").forEach(btn => {
+        btn.classList.remove("selected");
+        btn.setAttribute("aria-pressed", "false");
+      });
+
+      document.querySelectorAll(".question-card").forEach(card => {
+        card.classList.remove("answered");
+      });
+
+      resultsEl.classList.remove("show");
+      resultGridEl.innerHTML = "";
+      messageEl.textContent = "";
+      updateProgress();
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    recommendBtn.addEventListener("click", () => {
+      if (state.answers.some(v => v === null)) {
+        messageEl.textContent = "모든 질문에 점수를 선택해 주세요.";
+        return;
+      }
+
+      renderResults(getRecommendations());
+    });
+
+    resetBtn.addEventListener("click", resetAnswers);
+
+    async function init() {
+      try {
+        const [questionRows, itemRows] = await Promise.all([
+          loadCSV(QUESTION_CSV),
+          loadCSV(ITEM_CSV)
+        ]);
+
+        state.questions = readQuestions(questionRows);
+
+        const parsedItems = readItems(itemRows);
+        state.items = parsedItems.items;
+        state.featureNames = parsedItems.featureNames;
+
+        if (!state.questions.length) {
+          throw new Error("질문.csv에서 질문을 찾을 수 없습니다.");
+        }
+
+        if (!state.items.length) {
+          throw new Error("item.csv에서 직업 데이터를 찾을 수 없습니다.");
+        }
+
+        if (state.questions.length !== state.featureNames.length) {
+          throw new Error(
+            `질문 수(${state.questions.length})와 직업 특성 수(${state.featureNames.length})가 일치하지 않습니다.`
+          );
+        }
+
+        renderQuestions();
+      } catch (error) {
+        console.error(error);
+        errorBoxEl.classList.add("show");
+        errorBoxEl.innerHTML =
+          `<strong>데이터를 불러올 수 없습니다.</strong><br>` +
+          `${error.message}<br>` +
+          `GitHub/Vercel에서 <code>data/질문.csv</code>와 <code>data/item.csv</code> 경로를 확인해 주세요.`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
